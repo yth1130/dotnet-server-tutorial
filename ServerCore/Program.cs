@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 namespace ServerCore
 {
@@ -13,19 +14,16 @@ namespace ServerCore
         {
             try
             {
-                //받는다.
-                byte[] recvBuff = new byte[1024];
-                int recvBytes = clientSocket.Receive(recvBuff);
-                string recvData = Encoding.UTF8.GetString(recvBuff, 0, recvBytes);
-                Console.WriteLine($"[From Client] {recvData}");
+                Session session = new Session();
+                session.Start(clientSocket);
 
-                //보낸다.
                 byte[] sendBuff = Encoding.UTF8.GetBytes("Welcome to MMORPG Server!");
-                clientSocket.Send(sendBuff);
+                session.Send(sendBuff);
 
-                //쫓아낸다.
-                clientSocket.Shutdown(SocketShutdown.Both); //듣기도 싫고 말하기도 싫다.
-                clientSocket.Close(); //연결 끊기.
+                Thread.Sleep(1000);
+
+                session.Disconnect();
+                session.Disconnect();
             }
             catch (Exception e)
             {
@@ -47,6 +45,7 @@ namespace ServerCore
             listener.Init(endPoint, OnAcceptHandler);
             Console.WriteLine("Listening...");
 
+            // 주 스레드는 여기가 실행되지만 리스너의 콜백함수는 별도의 스레드에서 실행됨.
             while(true)
             {
                 

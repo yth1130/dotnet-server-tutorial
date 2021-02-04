@@ -31,10 +31,13 @@ namespace ServerCore
             args.AcceptSocket = null;
 
             bool pending = socket.AcceptAsync(args);
-            if (pending == false) //바로 완료가 됨.
+            if (pending == false) //바로 완료가 됨. 최대 대기수가 있기 때문에 계속 false가 되진 않음. -> 스택오버플로x
                 OnAcceptCompleted(null, args);
         }
 
+        //별도의 스레드에서 실행된다.
+        //다른 스레드와 같은 데이터에 접근하면 race condition이 일어난다.
+        //danger zone
         void OnAcceptCompleted(object sender, SocketAsyncEventArgs args)
         {
             if (args.SocketError == SocketError.Success)
@@ -50,9 +53,5 @@ namespace ServerCore
             RegisterAccept(args);
         }
 
-        public Socket Accept()
-        {
-            return socket.Accept();
-        }
     }
 }
