@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -9,22 +10,36 @@ namespace ServerCore
     {
         Socket socket;
         int disconnected = 0;
+        SocketAsyncEventArgs sendArgs = new SocketAsyncEventArgs();
+
+        object _lock = new object();
+        Queue<byte[]> sendQueue = new Queue<byte[]>();
+        bool _pending = false;
 
         public void Start(Socket socket)
         {
             this.socket = socket;
             
-            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-            args.Completed += new System.EventHandler<SocketAsyncEventArgs>(OnRecvCompleted);
+            SocketAsyncEventArgs recvArgs = new SocketAsyncEventArgs();
+            recvArgs.Completed += new System.EventHandler<SocketAsyncEventArgs>(OnRecvCompleted);
             // args.UserToken = this; //원하는 값을 넣을 수 있다.?
-            args.SetBuffer(new byte[1024], 0, 1024);
+            recvArgs.SetBuffer(new byte[1024], 0, 1024);
 
-            RegisterRecv(args);
+            sendArgs.Completed += new System.EventHandler<SocketAsyncEventArgs>(OnSendCompleted);
+
+            RegisterRecv(recvArgs);
         }
 
         public void Send(byte[] sendBuff)
         {
-            socket.Send(sendBuff);
+            lock (_lock) //한 번에 하나만.
+            {
+                sendQueue.Enqueue(sendBuff);
+                if (_pending == false) //전송 예약중이 아님.
+                {
+                    RegisterSend();
+                }
+            }
         }
 
         public void Disconnect()
@@ -37,6 +52,42 @@ namespace ServerCore
         }
 
 #region 네트워크 통신.
+        void RegisterSend()
+        {
+            _pending = true;
+            byte[] buff = sendQueue.Dequeue();
+            sendArgs.SetBuffer(buff, 0, buff.Length);
+
+            bool pending = socket.SendAsync(sendArgs);
+            if (pending == false)
+                OnSendCompleted(null, sendArgs);
+        }
+
+        void OnSendCompleted(object sender, SocketAsyncEventArgs args)
+        {
+            lock (_lock)
+            {
+                if (args.BytesTransferred > 0 && args.SocketError == SocketError.Success)
+                {
+                    try
+                    {
+                        if (sendQueue.Count > 0)
+                            RegisterSend();
+                        else
+                            _pending = false;
+                    }
+                    catch(Exception e)
+                    {
+                        Console.WriteLine($"OnSendCompleted failed {e.ToString()}");
+                    }
+                }
+                else
+                {
+                    Disconnect();
+                }
+            }
+        }
+
         void RegisterRecv(SocketAsyncEventArgs args)
         {
             bool pending = socket.ReceiveAsync(args);
@@ -63,7 +114,7 @@ namespace ServerCore
             }
             else
             {
-                //TODO Disconnect
+                Disconnect();
             }
 
         }
