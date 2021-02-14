@@ -6,30 +6,39 @@ using System.Threading;
 
 namespace ServerCore
 {
+    class GameSession: Session
+    {
+        public override void OnConnected(EndPoint endPoint)
+        {
+            Console.WriteLine($"OnConnected: {endPoint}");
+
+            byte[] sendBuff = Encoding.UTF8.GetBytes("Welcome to MMORPG Server!");
+            Send(sendBuff);
+
+            Thread.Sleep(1000);
+
+            Disconnect();
+            // Disconnect();
+        }
+        public override void OnDisconnected(EndPoint endPoint)
+        {
+            Console.WriteLine($"OnDisconnected: {endPoint}");
+        }
+        public override void OnRecv(ArraySegment<byte> buffer)
+        {
+            string recvData = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
+            Console.WriteLine($"[From Client] {recvData}");
+        }
+        public override void OnSend(int numOfBytes)
+        {
+            System.Console.WriteLine($"[transferred bytes]: {numOfBytes}");
+        }
+    }
+
+
     class Program
     {
         static Listener listener = new Listener();
-
-        static void OnAcceptHandler(Socket clientSocket)
-        {
-            try
-            {
-                Session session = new Session();
-                session.Start(clientSocket);
-
-                byte[] sendBuff = Encoding.UTF8.GetBytes("Welcome to MMORPG Server!");
-                session.Send(sendBuff);
-
-                Thread.Sleep(1000);
-
-                session.Disconnect();
-                session.Disconnect();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
-        }
         
         static void Main(string[] args)
         {
@@ -42,7 +51,7 @@ namespace ServerCore
             IPAddress address = ipHost.AddressList[0]; //식당 주소.
             IPEndPoint endPoint = new IPEndPoint(address, 7777); //식당 정문? 문의 번호. 문지기 번호.
 
-            listener.Init(endPoint, OnAcceptHandler);
+            listener.Init(endPoint, () => { return new GameSession(); });
             Console.WriteLine("Listening...");
 
             // 주 스레드는 여기가 실행되지만 리스너의 콜백함수는 별도의 스레드에서 실행됨.

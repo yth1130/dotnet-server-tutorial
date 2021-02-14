@@ -1,18 +1,29 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
 namespace ServerCore
 {
-    class Session
+    abstract class Session
     {
+        // class SessionHandler
+        // {
+
+        // }
+
         Socket socket;
         int disconnected = 0;
         List<ArraySegment<byte>> pendingList = new List<ArraySegment<byte>>();
         SocketAsyncEventArgs sendArgs = new SocketAsyncEventArgs();
         SocketAsyncEventArgs recvArgs = new SocketAsyncEventArgs();
+
+        public abstract void OnConnected(EndPoint endPoint);
+        public abstract void OnRecv(ArraySegment<byte> buffer);
+        public abstract void OnSend(int numOfBytes);
+        public abstract void OnDisconnected(EndPoint endPoint);
 
         object _lock = new object();
         Queue<byte[]> sendQueue = new Queue<byte[]>();
@@ -49,6 +60,7 @@ namespace ServerCore
             if (Interlocked.Exchange(ref disconnected, 1) == 1) //Disconnect 두번 불렸을 때 에러 방지.
                 return; //이미 다른코드가 1로 세팅함.
             
+            OnDisconnected(socket.RemoteEndPoint);
             socket.Shutdown(SocketShutdown.Both); //듣기도 싫고 말하기도 싫다.
             socket.Close(); //연결 끊기.
         }
@@ -85,7 +97,7 @@ namespace ServerCore
                         sendArgs.BufferList = null;
                         pendingList.Clear();
 
-                        System.Console.WriteLine($"[transferred bytes]: {sendArgs.BytesTransferred}");
+                        OnSend(sendArgs.BytesTransferred);
 
                         if (sendQueue.Count > 0)
                             RegisterSend();
@@ -117,9 +129,9 @@ namespace ServerCore
             {
                 try
                 {
-                    string recvData = Encoding.UTF8.GetString(args.Buffer, args.Offset, args.BytesTransferred);
-                    //TODO
-                    Console.WriteLine($"[From Client] {recvData}");
+                    // string recvData = Encoding.UTF8.GetString(args.Buffer, args.Offset, args.BytesTransferred);
+                    // Console.WriteLine($"[From Client] {recvData}");
+                    OnRecv(new ArraySegment<byte>(args.Buffer, args.Offset, args.BytesTransferred));
 
                     RegisterRecv();
                 }
