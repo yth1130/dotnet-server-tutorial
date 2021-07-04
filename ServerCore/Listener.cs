@@ -4,7 +4,8 @@ using System.Net.Sockets;
 
 namespace ServerCore
 {
-    class Listener
+    // 서버 입장에서 연결을 기다리는 놈.
+    public class Listener
     {
         Socket socket;
         Func<Session> sessionFactory;

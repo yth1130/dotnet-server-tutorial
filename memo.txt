@@ -89,5 +89,10 @@ OSI 7계층은 위의 TCP/IP모델에서 어플리케이션 부분이 세 계층
 영업 시작 -> Listen
 안내 -> Accept
 
+ServerCore는 실제 실행되는 프로젝트가 아니고 라이브러리의 형태로 사용됨.
+출력 형식을 클래스 라이브러리로 바꿔줘야 함.
+.csproj 파일에서 바꿔준다.
 
-
+Server 프로젝트가 ServerCore를 참조하도록 바꿔준다.
+dotnet add ./Server reference ./ServerCore
+dotnet add ./DummyClient reference ./ServerCore

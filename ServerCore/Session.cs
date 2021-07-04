@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace ServerCore
 {
-    abstract class Session
+    public abstract class Session
     {
         // class SessionHandler
         // {
