@@ -16,12 +16,16 @@ namespace ServerCore
 
         Socket socket;
         int disconnected = 0;
+
+        RecvBuffer recvBuffer = new RecvBuffer(1024);
+
+
         List<ArraySegment<byte>> pendingList = new List<ArraySegment<byte>>();
         SocketAsyncEventArgs sendArgs = new SocketAsyncEventArgs();
         SocketAsyncEventArgs recvArgs = new SocketAsyncEventArgs();
 
         public abstract void OnConnected(EndPoint endPoint);
-        public abstract void OnRecv(ArraySegment<byte> buffer);
+        public abstract int OnRecv(ArraySegment<byte> buffer); // 처리된 데이터 크기를 반환.
         public abstract void OnSend(int numOfBytes);
         public abstract void OnDisconnected(EndPoint endPoint);
 
@@ -35,7 +39,7 @@ namespace ServerCore
             
             recvArgs.Completed += new System.EventHandler<SocketAsyncEventArgs>(OnRecvCompleted);
             // args.UserToken = this; //원하는 값을 넣을 수 있다.?
-            recvArgs.SetBuffer(new byte[1024], 0, 1024);
+            // recvArgs.SetBuffer(new byte[1024], 0, 1024);
 
             sendArgs.Completed += new System.EventHandler<SocketAsyncEventArgs>(OnSendCompleted);
 
@@ -118,6 +122,11 @@ namespace ServerCore
 
         void RegisterRecv()
         {
+            // 유효 범위를 찝어줌..?
+            recvBuffer.Clean();
+            ArraySegment<byte> segment = recvBuffer.FreeSegment;
+            recvArgs.SetBuffer(segment.Array, segment.Offset, segment.Count);
+
             bool pending = socket.ReceiveAsync(recvArgs);
             if (pending == false)
                 OnRecvCompleted(null, recvArgs);
@@ -129,9 +138,29 @@ namespace ServerCore
             {
                 try
                 {
-                    // string recvData = Encoding.UTF8.GetString(args.Buffer, args.Offset, args.BytesTransferred);
-                    // Console.WriteLine($"[From Client] {recvData}");
-                    OnRecv(new ArraySegment<byte>(args.Buffer, args.Offset, args.BytesTransferred));
+                    // write커서 이동.
+                    if (recvBuffer.OnWrite(args.BytesTransferred) == false)
+                    {
+                        Disconnect();
+                        return;
+                    }
+
+                    // OnRecv(new ArraySegment<byte>(args.Buffer, args.Offset, args.BytesTransferred));
+                    // 컨텐츠 쪽으로 데이터를 넘겨주고 얼마나 처리했는지 받는다.
+                    int processLen = OnRecv(recvBuffer.DataSegment);
+                    if (processLen < 0 || recvBuffer.DataSize < processLen)
+                    {
+                        Disconnect();
+                        return;
+                    }
+
+                    // Read커서 이동.
+                    if (recvBuffer.OnRead(processLen) == false)
+                    {
+                        Disconnect();
+                        return;
+                    }
+
 
                     RegisterRecv();
                 }

@@ -28,10 +28,11 @@ namespace Server
 
         // 이중 패킷. ( (3,2) 좌표로 이동하고 싶다. )
         // 15(이동) 3 2(좌표)
-        public override void OnRecv(ArraySegment<byte> buffer)
+        public override int OnRecv(ArraySegment<byte> buffer)
         {
             string recvData = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
             Console.WriteLine($"[From Client] {recvData}");
+            return buffer.Count;
         }
         public override void OnSend(int numOfBytes)
         {
