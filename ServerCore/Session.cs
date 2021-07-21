@@ -30,7 +30,7 @@ namespace ServerCore
         public abstract void OnDisconnected(EndPoint endPoint);
 
         object _lock = new object();
-        Queue<byte[]> sendQueue = new Queue<byte[]>();
+        Queue<ArraySegment<byte>> sendQueue = new Queue<ArraySegment<byte>>();
         // bool _pending = false;
 
         public void Start(Socket socket)
@@ -46,7 +46,7 @@ namespace ServerCore
             RegisterRecv();
         }
 
-        public void Send(byte[] sendBuff)
+        public void Send(ArraySegment<byte> sendBuff)
         {
             lock (_lock) //한 번에 하나만.
             {
@@ -80,8 +80,8 @@ namespace ServerCore
             // List<ArraySegment<byte>> list = new List<ArraySegment<byte>>();
             while(sendQueue.Count > 0)
             {
-                byte[] buff = sendQueue.Dequeue();
-                pendingList.Add(new ArraySegment<byte>(buff, 0, buff.Length));
+                ArraySegment<byte> buff = sendQueue.Dequeue();
+                pendingList.Add(buff);
             }
             sendArgs.BufferList = pendingList;
 
