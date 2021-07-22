@@ -7,6 +7,35 @@ using System.Threading;
 
 namespace ServerCore
 {
+    public abstract class PacketSession : Session
+    {
+        public static readonly int HeaderSize = 2;
+        // [size(2)][packetId(2)][ ... ][size(2)][packetId(2)][ ... ]...
+        public sealed override int OnRecv(ArraySegment<byte> buffer) // sealed를 붙이면 자식 클래스에서 override 못함.
+        {
+            int processLength = 0;
+            while (true)
+            {
+                // 최소한 헤더는 파싱할 수 있는지 확인.
+                if (buffer.Count < HeaderSize)
+                    break;
+
+                // 패킷이 완전체로 도착했는지 확인.
+                ushort dataSize = BitConverter.ToUInt16(buffer.Array, buffer.Offset);
+                if (buffer.Count < dataSize)
+                    break;
+
+                // 여기까지 오면 패킷 조립 가능. 해당 패킷을 넘겨준다.
+                OnRecvPacket(new ArraySegment<byte>(buffer.Array, buffer.Offset, dataSize));
+
+                processLength += dataSize;
+                buffer = new ArraySegment<byte>(buffer.Array, buffer.Offset + dataSize, buffer.Count - dataSize);
+            }
+            return processLength;
+        }
+
+        public abstract void OnRecvPacket(ArraySegment<byte> buffer);
+    }
     public abstract class Session
     {
         // class SessionHandler

@@ -8,20 +8,25 @@ using ServerCore;
 
 namespace Server
 {
-    class Knight
+    class Packet
     {
-        public int hp;
-        public int attack;
-        public string name;
-        public List<int> skills = new List<int>();
+        // ushort는 2바이트. 0~64k
+        public ushort size; // 패킷의 종류만 보고 크기를 파악하기 힘들기 때문에 첫 인자로 크기를 넣어준다. 자신의 크기를 포함할 지는 정해야 함.
+        public ushort packetId; // 패킷의 종류.
+        // public string name;
+        // public List<int> skills = new List<int>();
     }
-    class GameSession: Session
+    class LoginOkPacket : Packet
+    {
+        
+    }
+    class GameSession: PacketSession
     {
         public override void OnConnected(EndPoint endPoint)
         {
             Console.WriteLine($"OnConnected: {endPoint}");
 
-            Knight knight = new Knight() { hp = 100, attack = 10 };
+            // Packet packet = new Packet() { size = 100, packetId = 10 };
 
             // [ 100 ] [ 10 ]
             // byte[] sendBuff = new byte[4096];
@@ -30,17 +35,17 @@ namespace Server
             // Array.Copy(buffer, 0, sendBuff, 0, buffer.Length);
             // Array.Copy(buffer2, 0, sendBuff, buffer.Length, buffer2.Length);
 
-            ArraySegment<byte> openSegment = SendBufferHelper.Open(4096);
-            byte[] buffer = BitConverter.GetBytes(knight.hp);
-            byte[] buffer2 = BitConverter.GetBytes(knight.attack);
-            Array.Copy(buffer, 0, openSegment.Array, openSegment.Offset, buffer.Length);
-            Array.Copy(buffer2, 0, openSegment.Array, openSegment.Offset + buffer.Length, buffer2.Length);
-            ArraySegment<byte> sendBuff = SendBufferHelper.Close(buffer.Length + buffer2.Length);
+            // ArraySegment<byte> openSegment = SendBufferHelper.Open(4096);
+            // byte[] buffer = BitConverter.GetBytes(packet.size);
+            // byte[] buffer2 = BitConverter.GetBytes(packet.packetId);
+            // Array.Copy(buffer, 0, openSegment.Array, openSegment.Offset, buffer.Length);
+            // Array.Copy(buffer2, 0, openSegment.Array, openSegment.Offset + buffer.Length, buffer2.Length);
+            // ArraySegment<byte> sendBuff = SendBufferHelper.Close(buffer.Length + buffer2.Length);
 
             // byte[] sendBuff = Encoding.UTF8.GetBytes("Welcome to MMORPG Server!");
-            Send(sendBuff);
+            // Send(sendBuff);
 
-            Thread.Sleep(1000);
+            Thread.Sleep(5000);
 
             Disconnect();
             // Disconnect();
@@ -52,12 +57,20 @@ namespace Server
 
         // 이중 패킷. ( (3,2) 좌표로 이동하고 싶다. )
         // 15(이동) 3 2(좌표)
-        public override int OnRecv(ArraySegment<byte> buffer)
+        // public override int OnRecv(ArraySegment<byte> buffer)
+        // {
+        //     string recvData = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
+        //     Console.WriteLine($"[From Client] {recvData}");
+        //     return buffer.Count;
+        // }
+
+        public override void OnRecvPacket(ArraySegment<byte> buffer)
         {
-            string recvData = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
-            Console.WriteLine($"[From Client] {recvData}");
-            return buffer.Count;
+            ushort size = BitConverter.ToUInt16(buffer.Array, buffer.Offset);
+            ushort id = BitConverter.ToUInt16(buffer.Array, buffer.Offset + 2);
+            Console.WriteLine($"RecvPacketId:{id}/Size:{size}");
         }
+
         public override void OnSend(int numOfBytes)
         {
             System.Console.WriteLine($"[transferred bytes]: {numOfBytes}");
