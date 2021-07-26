@@ -5,24 +5,64 @@ using ServerCore;
 
 namespace DummyClient
 {
-    class Packet
+    public abstract class Packet
     {
         public ushort size;
         public ushort packetId;
+
+        public abstract ArraySegment<byte> Write();
+        public abstract void Read(ArraySegment<byte> s);
     }
 
     // 클라에서 서버로 요구.
     class PlayerInfoReq : Packet
     {
         public long playerId;
+
+        public PlayerInfoReq()
+        {
+            packetId = (ushort)PacketID.PlayerInfoReq;
+        }
+
+        public override void Read(ArraySegment<byte> s)
+        {
+            ushort count = 0;
+            // ushort size = BitConverter.ToUInt16(s.Array, s.Offset + count);
+            count += 2;
+            // ushort id = BitConverter.ToUInt16(s.Array, s.Offset + count);
+            count += 2;
+            // this.playerId = BitConverter.ToInt64(s.Array, s.Offset + count);
+            this.playerId = BitConverter.ToInt64(new ReadOnlySpan<byte>(s.Array, s.Offset + count, s.Count - count));
+            count += 8;
+        }
+
+        public override ArraySegment<byte> Write()
+        {
+            ArraySegment<byte> s = SendBufferHelper.Open(4096);
+            ushort count = 0;
+            bool success = true;
+
+            count += 2;
+            success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset + count, s.Count - count), this.packetId);
+            count += 2;
+            success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset + count, s.Count - count), this.playerId);
+            count += 8;
+
+            success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset, s.Count), count);
+
+            if (success == false)
+                return null;
+            
+            return SendBufferHelper.Close(count);
+        }
     }
 
-    // 서버에서 클라로 답변.
-    class PlayerInfoOk : Packet
-    {
-        public int hp;
-        public int attack;
-    }
+    // // 서버에서 클라로 답변.
+    // class PlayerInfoOk : Packet
+    // {
+    //     public int hp;
+    //     public int attack;
+    // }
 
     public enum PacketID
     {
@@ -43,43 +83,13 @@ namespace DummyClient
         {
             Console.WriteLine($"OnConnected: {endPoint}");
 
-            PlayerInfoReq packet = new PlayerInfoReq() { size = 4, packetId = (ushort)PacketID.PlayerInfoReq, playerId = 1001};
+            PlayerInfoReq packet = new PlayerInfoReq() { playerId = 1001};
 
             // 보낸다.
-            // for (int i = 0; i < 5; i++)
             {
-                ArraySegment<byte> openSegment = SendBufferHelper.Open(4096);
-                ushort count = 0;
-                bool success = true;
-
-                // // 안정적이지만 느리다.
-                // byte[] size = BitConverter.GetBytes(packet.size);
-                // byte[] packetId = BitConverter.GetBytes(packet.packetId);
-                // byte[] playerId = BitConverter.GetBytes(packet.playerId);
-
-                // Array.Copy(size, 0, openSegment.Array, openSegment.Offset + count, 2);
-                // count += 2;
-                // Array.Copy(packetId, 0, openSegment.Array, openSegment.Offset + count, 2);
-                // count += 2;
-                // Array.Copy(playerId, 0, openSegment.Array, openSegment.Offset + count, 8);
-                // count += 8;
-
-                // 빠른 버전.
-                // success &= BitConverter.TryWriteBytes(new Span<byte>(openSegment.Array, openSegment.Offset + count, openSegment.Count - count), packet.size);
-                count += 2;
-                success &= BitConverter.TryWriteBytes(new Span<byte>(openSegment.Array, openSegment.Offset + count, openSegment.Count - count), packet.packetId);
-                count += 2;
-                success &= BitConverter.TryWriteBytes(new Span<byte>(openSegment.Array, openSegment.Offset + count, openSegment.Count - count), packet.playerId);
-                count += 8;
-
-                // 전체 크기를 마지막에 맨 앞에다 넣어준다.
-                success &= BitConverter.TryWriteBytes(new Span<byte>(openSegment.Array, openSegment.Offset, openSegment.Count), count);
-                
-                ArraySegment<byte> sendBuff = SendBufferHelper.Close(count);
-
-                // byte[] sendBuff = Encoding.UTF8.GetBytes($"Hello World! {i}");
-                if (success)
-                    Send(sendBuff);
+                ArraySegment<byte> s = packet.Write();
+                if (s != null)
+                    Send(s);
             }
         }
         public override void OnDisconnected(EndPoint endPoint)
