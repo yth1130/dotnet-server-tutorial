@@ -18,37 +18,60 @@ namespace DummyClient
     class PlayerInfoReq : Packet
     {
         public long playerId;
+        public string name; // 크기가 정해져있지 않음.
 
         public PlayerInfoReq()
         {
             packetId = (ushort)PacketID.PlayerInfoReq;
         }
 
-        public override void Read(ArraySegment<byte> s)
+        public override void Read(ArraySegment<byte> segment)
         {
+            ReadOnlySpan<byte> span = new ReadOnlySpan<byte>(segment.Array, segment.Offset, segment.Count);
+
             ushort count = 0;
-            // ushort size = BitConverter.ToUInt16(s.Array, s.Offset + count);
-            count += 2;
-            // ushort id = BitConverter.ToUInt16(s.Array, s.Offset + count);
-            count += 2;
-            // this.playerId = BitConverter.ToInt64(s.Array, s.Offset + count);
-            this.playerId = BitConverter.ToInt64(new ReadOnlySpan<byte>(s.Array, s.Offset + count, s.Count - count));
-            count += 8;
+            count += sizeof(ushort);
+            count += sizeof(ushort);
+            this.playerId = BitConverter.ToInt64(span.Slice(count, span.Length - count));
+            count += sizeof(long);
+
+            // string
+            ushort nameLength = BitConverter.ToUInt16(span.Slice(count, span.Length - count));
+            count += sizeof(ushort);
+            this.name = Encoding.Unicode.GetString(span.Slice(count, nameLength));
         }
 
         public override ArraySegment<byte> Write()
         {
-            ArraySegment<byte> s = SendBufferHelper.Open(4096);
+            ArraySegment<byte> segment = SendBufferHelper.Open(4096);
             ushort count = 0;
             bool success = true;
 
-            count += 2;
-            success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset + count, s.Count - count), this.packetId);
-            count += 2;
-            success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset + count, s.Count - count), this.playerId);
-            count += 8;
+            Span<byte> span = new Span<byte>(segment.Array, segment.Offset, segment.Count);
 
-            success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset, s.Count), count);
+            count += sizeof(ushort);
+            success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), this.packetId);
+            count += sizeof(ushort);
+            success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), this.playerId);
+            count += sizeof(long);
+
+            // string
+            // c++에서는 NULL 0x00 00 으로 끝남.
+            // c#은 아님.
+            // string의 길이를 먼저 보내고 그다음 실제 그 크기만큼 byte[]로 보내준다.
+            
+            // ushort nameLength = (ushort)Encoding.Unicode.GetByteCount(this.name);
+            // success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), nameLength);
+            // count += sizeof(ushort);
+            // Array.Copy(Encoding.Unicode.GetBytes(this.name), 0, segment.Array, count, nameLength);
+            // count += nameLength;
+
+            ushort nameLength = (ushort)Encoding.Unicode.GetBytes(this.name, 0, this.name.Length, segment.Array, segment.Offset + count + sizeof(ushort)); // nameLength가 들어갈 공간만큼 뒤로 밀어준다.
+            success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), nameLength);
+            count += sizeof(ushort);
+            count += nameLength;
+
+            success &= BitConverter.TryWriteBytes(segment, count);
 
             if (success == false)
                 return null;
@@ -83,7 +106,7 @@ namespace DummyClient
         {
             Console.WriteLine($"OnConnected: {endPoint}");
 
-            PlayerInfoReq packet = new PlayerInfoReq() { playerId = 1001};
+            PlayerInfoReq packet = new PlayerInfoReq() { playerId = 1001, name = "ABCD" };
 
             // 보낸다.
             {
