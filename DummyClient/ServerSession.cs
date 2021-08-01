@@ -6,17 +6,8 @@ using ServerCore;
 
 namespace DummyClient
 {
-    public abstract class Packet
-    {
-        public ushort size;
-        public ushort packetId;
-
-        public abstract ArraySegment<byte> Write();
-        public abstract void Read(ArraySegment<byte> s);
-    }
-
     // 클라에서 서버로 요구.
-    class PlayerInfoReq : Packet
+    class PlayerInfoReq
     {
         public long playerId;
         public string name; // 크기가 정해져있지 않음.
@@ -52,12 +43,7 @@ namespace DummyClient
 
         public List<SkillInfo> skills = new List<SkillInfo>();
 
-        public PlayerInfoReq()
-        {
-            packetId = (ushort)PacketID.PlayerInfoReq;
-        }
-
-        public override void Read(ArraySegment<byte> segment)
+        public void Read(ArraySegment<byte> segment)
         {
             ReadOnlySpan<byte> span = new ReadOnlySpan<byte>(segment.Array, segment.Offset, segment.Count);
 
@@ -85,7 +71,7 @@ namespace DummyClient
             }
         }
 
-        public override ArraySegment<byte> Write()
+        public ArraySegment<byte> Write()
         {
             ArraySegment<byte> segment = SendBufferHelper.Open(4096);
             ushort count = 0;
@@ -94,7 +80,7 @@ namespace DummyClient
             Span<byte> span = new Span<byte>(segment.Array, segment.Offset, segment.Count);
 
             count += sizeof(ushort);
-            success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), this.packetId);
+            success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), (ushort)PacketID.PlayerInfoReq);
             count += sizeof(ushort);
             success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), this.playerId);
             count += sizeof(long);
