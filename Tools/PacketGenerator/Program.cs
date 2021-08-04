@@ -7,6 +7,8 @@ namespace PacketGenerator
     class Program
     {
         static string genPackets;
+        static ushort packetId;
+        static string packetEnums;
 
         static void Main(string[] args)
         {
@@ -27,7 +29,8 @@ namespace PacketGenerator
                     // System.Console.WriteLine(reader.Name+" "+reader["name"]);
                 }
 
-                File.WriteAllText("GenPackets.cs", genPackets);
+                string fileText = string.Format(PacketFormat.fileFormat, packetEnums, genPackets);
+                File.WriteAllText("GenPackets.cs", fileText);
             }
             
         }
@@ -50,8 +53,8 @@ namespace PacketGenerator
             
             // Tuple은 여러개를 묶는 용도?
             Tuple<string, string, string> tuple = ParseMembers(reader);
-            genPackets = string.Format(PacketFormat.packetFormat,
-                packetName, tuple.Item1, tuple.Item2, tuple.Item3);
+            genPackets += string.Format(PacketFormat.packetFormat, packetName, tuple.Item1, tuple.Item2, tuple.Item3);
+            packetEnums += string.Format(PacketFormat.packetEnumFormat, packetName, ++packetId) + Environment.NewLine + "\t";
         }
 
         // {1} : 멤버 변수.
@@ -88,8 +91,13 @@ namespace PacketGenerator
                 string memberType = reader.Name.ToLower();
                 switch (memberType)
                 {
-                    case "bool":
                     case "byte":
+                    case "sbyte":
+                        memberCode += string.Format(PacketFormat.memberFormat, memberType, memberName);
+                        readCode += string.Format(PacketFormat.readByteFormat, memberName, memberType);
+                        writeCode += string.Format(PacketFormat.writeByteFormat, memberName, memberType);
+                        break;
+                    case "bool":
                     case "short":
                     case "ushort":
                     case "int":
