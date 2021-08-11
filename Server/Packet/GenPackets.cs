@@ -6,12 +6,19 @@ using ServerCore;
 
 public enum PacketID
 {
-    PlayerInfoReq = 1,
-	Test = 2,
+    C_PlayerInfoReq = 1,
+	S_Test = 2,
 	
 }
 
-class PlayerInfoReq
+interface IPacket
+{
+    ushort Protocol { get; }
+    void Read(ArraySegment<byte> segment);
+    ArraySegment<byte> Write();
+}
+
+class C_PlayerInfoReq : IPacket
 {
     public long playerId;
 	
@@ -57,6 +64,8 @@ class PlayerInfoReq
 	public List<Skill> skills = new List<Skill>();
 	
 
+    public ushort Protocol { get { return (ushort)PacketID.C_PlayerInfoReq; } }
+
     public void Read(ArraySegment<byte> segment)
     {
         ReadOnlySpan<byte> span = new ReadOnlySpan<byte>(segment.Array, segment.Offset, segment.Count);
@@ -92,7 +101,7 @@ class PlayerInfoReq
         Span<byte> span = new Span<byte>(segment.Array, segment.Offset, segment.Count);
 
         count += sizeof(ushort);
-        success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), (ushort)PacketID.PlayerInfoReq);
+        success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), (ushort)PacketID.C_PlayerInfoReq);
         count += sizeof(ushort);
         success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), this.playerId);
 		count += sizeof(long);
@@ -113,9 +122,11 @@ class PlayerInfoReq
         return SendBufferHelper.Close(count);
     }
 }
-class Test
+class S_Test : IPacket
 {
     public int testInt;
+
+    public ushort Protocol { get { return (ushort)PacketID.S_Test; } }
 
     public void Read(ArraySegment<byte> segment)
     {
@@ -139,7 +150,7 @@ class Test
         Span<byte> span = new Span<byte>(segment.Array, segment.Offset, segment.Count);
 
         count += sizeof(ushort);
-        success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), (ushort)PacketID.Test);
+        success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), (ushort)PacketID.S_Test);
         count += sizeof(ushort);
         success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), this.testInt);
 		count += sizeof(int);
