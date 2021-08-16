@@ -19,19 +19,19 @@ namespace DummyClient
 
             Connector connector = new Connector();
 
-            connector.Connect(endPoint, () => new ServerSession());
+            connector.Connect(endPoint, () => SessionManager.Instance.Generate(), count: 10);
 
             while(true)
             {
                 try
                 {
-                    
+                    SessionManager.Instance.SendForEach();
                 }
                 catch(Exception e)
                 {
                     Console.WriteLine(e.ToString());
                 }
-                Thread.Sleep(100);
+                Thread.Sleep(250); //mmorpg에서 일반적으로 이동 패킷을 1초에 네번정도 보냄.
             }
 
         }

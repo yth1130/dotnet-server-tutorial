@@ -16,8 +16,6 @@ namespace Server
         
         static void Main(string[] args)
         {
-            PacketManager.Instance.Register();
-
             //DNS(Domain Name System)
             //172.1.2.3 이라고 놓으면? 서버가 바뀌었을 때 아이피주소가 바뀔수 있다.
             //도메인을 등록. www.rookiss.com -> 123.123.123.12 이런식으로 하면 관리가 쉬워짐.
