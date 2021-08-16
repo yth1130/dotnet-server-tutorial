@@ -1,17 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <PDL>
     <!-- C가 앞에 붙으면 클라에서 서버로 보내는 패킷을 의미-->
-    <packet name="C_PlayerInfoReq">
-        <long name="playerId"/>
-        <string name="name"/>
-        <list name="skill">
-            <int name="id"/>
-            <short name="level"/>
-            <float name="duration"/>
-        </list>
+    <packet name="C_Chat">
+        <string name="chat"/>
     </packet>
     <!-- S가 앞에 붙으면 서버에서 클라로-->
-    <packet name="S_Test">
-        <int name="testInt"/>
+    <packet name="S_Chat">
+        <int name="playerId"/>
+        <string name="chat"/>
     </packet>
 </PDL>

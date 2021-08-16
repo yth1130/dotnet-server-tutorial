@@ -12,6 +12,7 @@ namespace Server
     class Program
     {
         static Listener listener = new Listener();
+        public static GameRoom Room = new GameRoom();
         
         static void Main(string[] args)
         {
@@ -26,7 +27,7 @@ namespace Server
             IPAddress address = ipHost.AddressList[0]; //식당 주소.
             IPEndPoint endPoint = new IPEndPoint(address, 7777); //식당 정문? 문의 번호. 문지기 번호.
 
-            listener.Init(endPoint, () => { return new ClientSession(); });
+            listener.Init(endPoint, () => { return SessionManager.Instance.Generate(); });
             Console.WriteLine("Listening...");
 
             // 주 스레드는 여기가 실행되지만 리스너의 콜백함수는 별도의 스레드에서 실행됨.

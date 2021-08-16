@@ -7,45 +7,30 @@ using ServerCore;
 
 namespace Server
 {
-    public enum PacketID
-    {
-        PlayerInfoReq = 1,
-        PlayerInfoOk = 2,
-    }
-
     // 클라이언트의 대리자.
     class ClientSession: PacketSession
     {
+        public int SessionId { get; set; }
+        public GameRoom Room { get; set; }
+
+
         public override void OnConnected(EndPoint endPoint)
         {
             Console.WriteLine($"OnConnected: {endPoint}");
 
-            // Packet packet = new Packet() { size = 100, packetId = 10 };
-
-            // [ 100 ] [ 10 ]
-            // byte[] sendBuff = new byte[4096];
-            // byte[] buffer = BitConverter.GetBytes(knight.hp);
-            // byte[] buffer2 = BitConverter.GetBytes(knight.attack);
-            // Array.Copy(buffer, 0, sendBuff, 0, buffer.Length);
-            // Array.Copy(buffer2, 0, sendBuff, buffer.Length, buffer2.Length);
-
-            // ArraySegment<byte> openSegment = SendBufferHelper.Open(4096);
-            // byte[] buffer = BitConverter.GetBytes(packet.size);
-            // byte[] buffer2 = BitConverter.GetBytes(packet.packetId);
-            // Array.Copy(buffer, 0, openSegment.Array, openSegment.Offset, buffer.Length);
-            // Array.Copy(buffer2, 0, openSegment.Array, openSegment.Offset + buffer.Length, buffer2.Length);
-            // ArraySegment<byte> sendBuff = SendBufferHelper.Close(buffer.Length + buffer2.Length);
-
-            // byte[] sendBuff = Encoding.UTF8.GetBytes("Welcome to MMORPG Server!");
-            // Send(sendBuff);
-
-            Thread.Sleep(5000);
-
-            Disconnect();
+            // Thread.Sleep(5000);
             // Disconnect();
+
+            Program.Room.Enter(this);
         }
         public override void OnDisconnected(EndPoint endPoint)
         {
+            SessionManager.Instance.Remove(this);
+            if (Room != null)
+            {
+                Room.Leave(this);
+                Room = null;
+            }
             Console.WriteLine($"OnDisconnected: {endPoint}");
         }
 
