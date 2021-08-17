@@ -21,14 +21,18 @@ namespace Server
             // Thread.Sleep(5000);
             // Disconnect();
 
-            Program.Room.Enter(this);
+            // Program.Room.Enter(this);
+            Program.Room.Push(() => Program.Room.Enter(this));
         }
         public override void OnDisconnected(EndPoint endPoint)
         {
             SessionManager.Instance.Remove(this);
             if (Room != null)
             {
-                Room.Leave(this);
+                // Room.Leave(this);
+                // Room = null;
+                GameRoom room = Room;
+                room.Push(() => room.Leave(this));
                 Room = null;
             }
             Console.WriteLine($"OnDisconnected: {endPoint}");

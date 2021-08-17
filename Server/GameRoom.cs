@@ -1,12 +1,18 @@
 using System;
 using System.Collections.Generic;
+using ServerCore;
 
 namespace Server
 {
-    class GameRoom
+    class GameRoom : IJobQueue
     {
         List<ClientSession> sessions = new List<ClientSession>();
-        object _lock = new object();
+        JobQueue jobQueue = new JobQueue();
+
+        public void Push(Action job)
+        {
+            jobQueue.Push(job);
+        }
 
         public void Broadcast(ClientSession session, string chat)
         {
@@ -16,28 +22,18 @@ namespace Server
 
             ArraySegment<byte> segment = packet.Write();
 
-            lock (_lock)
-            {
-                foreach (var otherSession in sessions)
-                    otherSession.Send(segment);
-            }
+            foreach (var otherSession in sessions)
+                otherSession.Send(segment);
         }
 
         public void Enter(ClientSession session)
         {
-            lock (_lock)
-            {
-                sessions.Add(session);
-                session.Room = this;   
-            }
+            sessions.Add(session);
+            session.Room = this;   
         }
         public void Leave(ClientSession session)
         {
-            lock (_lock)
-            {
-                sessions.Remove(session);                
-            }
-
+            sessions.Remove(session);                
         }
     }
 }
