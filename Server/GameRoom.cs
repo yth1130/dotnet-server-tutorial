@@ -22,6 +22,7 @@ namespace Server
 
             ArraySegment<byte> segment = packet.Write();
 
+            //TODO: 패킷 모아보내기.
             foreach (var otherSession in sessions)
                 otherSession.Send(segment);
         }

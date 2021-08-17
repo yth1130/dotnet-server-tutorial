@@ -10,7 +10,7 @@ namespace ServerCore
         Socket socket;
         Func<Session> sessionFactory;
 
-        public void Init(IPEndPoint endPoint, Func<Session> sessionFactory)
+        public void Init(IPEndPoint endPoint, Func<Session> sessionFactory, int register = 10, int backlog = 100)
         {
             socket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp); //Tcp 세팅.
             this.sessionFactory += sessionFactory;
@@ -19,11 +19,14 @@ namespace ServerCore
             socket.Bind(endPoint);
 
             //영업 시작.
-            socket.Listen(10); //backlog: 최대 대기수. 라이브일 때 조절해야함.
+            socket.Listen(backlog); //backlog: 최대 대기수. 라이브일 때 조절해야함.
 
-            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-            args.Completed += new System.EventHandler<SocketAsyncEventArgs>(OnAcceptCompleted);
-            RegisterAccept(args);
+            for (int i = 0; i < register; i++)
+            {
+                SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+                args.Completed += new System.EventHandler<SocketAsyncEventArgs>(OnAcceptCompleted);
+                RegisterAccept(args);
+            }
         }
 
         void RegisterAccept(SocketAsyncEventArgs args)
