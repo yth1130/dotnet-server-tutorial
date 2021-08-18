@@ -8,10 +8,21 @@ namespace Server
     {
         List<ClientSession> sessions = new List<ClientSession>();
         JobQueue jobQueue = new JobQueue();
+        List<ArraySegment<byte>> pendingList = new List<ArraySegment<byte>>();
 
         public void Push(Action job)
         {
             jobQueue.Push(job);
+        }
+
+        // jobQueue안에서 하나의 스레드만 실행한다는게 보장되기 때문에 따로 락을 걸지 않는다. 
+        public void Flush()
+        {
+            foreach (var otherSession in sessions)
+                otherSession.Send(pendingList);
+
+            System.Console.WriteLine($"Flushed {pendingList.Count} items");
+            pendingList.Clear();
         }
 
         public void Broadcast(ClientSession session, string chat)
@@ -22,9 +33,7 @@ namespace Server
 
             ArraySegment<byte> segment = packet.Write();
 
-            //TODO: 패킷 모아보내기.
-            foreach (var otherSession in sessions)
-                otherSession.Send(segment);
+            pendingList.Add(segment);
         }
 
         public void Enter(ClientSession session)

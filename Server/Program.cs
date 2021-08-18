@@ -31,7 +31,8 @@ namespace Server
             // 주 스레드는 여기가 실행되지만 리스너의 콜백함수는 별도의 스레드에서 실행됨.
             while(true)
             {
-                
+                Room.Push(() => Room.Flush());
+                Thread.Sleep(250);
             }
         }
     }

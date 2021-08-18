@@ -14,6 +14,8 @@ namespace ServerCore
         public sealed override int OnRecv(ArraySegment<byte> buffer) // sealed를 붙이면 자식 클래스에서 override 못함.
         {
             int processLength = 0;
+            int packetCount = 0;
+            
             while (true)
             {
                 // 최소한 헤더는 파싱할 수 있는지 확인.
@@ -27,10 +29,14 @@ namespace ServerCore
 
                 // 여기까지 오면 패킷 조립 가능. 해당 패킷을 넘겨준다.
                 OnRecvPacket(new ArraySegment<byte>(buffer.Array, buffer.Offset, dataSize));
+                packetCount++;
 
                 processLength += dataSize;
                 buffer = new ArraySegment<byte>(buffer.Array, buffer.Offset + dataSize, buffer.Count - dataSize);
             }
+            if (packetCount > 1)
+                System.Console.WriteLine($"패킷 모아보내기 : {packetCount}");
+            
             return processLength;
         }
 
@@ -46,8 +52,7 @@ namespace ServerCore
         Socket socket;
         int disconnected = 0;
 
-        RecvBuffer recvBuffer = new RecvBuffer(1024);
-
+        RecvBuffer recvBuffer = new RecvBuffer(65535);
 
         List<ArraySegment<byte>> pendingList = new List<ArraySegment<byte>>();
         SocketAsyncEventArgs sendArgs = new SocketAsyncEventArgs();
@@ -84,6 +89,25 @@ namespace ServerCore
             RegisterRecv();
         }
 
+        public void Send(List<ArraySegment<byte>> sendBuffList)
+        {
+            if (sendBuffList.Count == 0)
+                return;
+
+            lock (_lock) //한 번에 하나만.
+            {
+                foreach (var sendBuff in sendBuffList)
+                {
+                    sendQueue.Enqueue(sendBuff);
+                }
+
+                // if (_pending == false) //전송 예약중이 아님.
+                if (pendingList.Count == 0) //전송 예약중이 아님.
+                {
+                    RegisterSend();
+                }
+            }
+        }
         public void Send(ArraySegment<byte> sendBuff)
         {
             lock (_lock) //한 번에 하나만.
@@ -164,10 +188,10 @@ namespace ServerCore
                         Console.WriteLine($"OnSendCompleted failed {e.ToString()}");
                     }
                 }
-                else
-                {
-                    Disconnect();
-                }
+                // else
+                // {
+                //     Disconnect();
+                // }
             }
         }
 
