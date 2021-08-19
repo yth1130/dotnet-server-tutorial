@@ -13,6 +13,12 @@ namespace Server
     {
         static Listener listener = new Listener();
         public static GameRoom Room = new GameRoom();
+
+        static void FlushRoom()
+        {
+            Room.Push(() => Room.Flush());
+            JobTimer.Instance.Push(FlushRoom, 250);
+        }
         
         static void Main(string[] args)
         {
@@ -28,11 +34,13 @@ namespace Server
             listener.Init(endPoint, () => { return SessionManager.Instance.Generate(); });
             Console.WriteLine("Listening...");
 
+            // FlushRoom();
+            JobTimer.Instance.Push(FlushRoom);
+
             // 주 스레드는 여기가 실행되지만 리스너의 콜백함수는 별도의 스레드에서 실행됨.
             while(true)
             {
-                Room.Push(() => Room.Flush());
-                Thread.Sleep(250);
+                JobTimer.Instance.Flush();
             }
         }
     }
