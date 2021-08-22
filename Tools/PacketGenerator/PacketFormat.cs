@@ -103,8 +103,6 @@ interface IPacket
 
     public void Read(ArraySegment<byte> segment)
     {{
-        ReadOnlySpan<byte> span = new ReadOnlySpan<byte>(segment.Array, segment.Offset, segment.Count);
-
         ushort count = 0;
         count += sizeof(ushort);
         count += sizeof(ushort);
@@ -116,18 +114,12 @@ interface IPacket
     {{
         ArraySegment<byte> segment = SendBufferHelper.Open(4096);
         ushort count = 0;
-        bool success = true;
-
-        Span<byte> span = new Span<byte>(segment.Array, segment.Offset, segment.Count);
 
         count += sizeof(ushort);
-        success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), (ushort)PacketID.{0});
+        Array.Copy(BitConverter.GetBytes((ushort)PacketID.{0}), 0, segment.Array, segment.Offset + count, sizeof(ushort));
         count += sizeof(ushort);
         {3}
-        success &= BitConverter.TryWriteBytes(segment, count);
-
-        if (success == false)
-            return null;
+        Array.Copy(BitConverter.GetBytes(count), 0, segment.Array, segment.Offset, sizeof(ushort));
         
         return SendBufferHelper.Close(count);
     }}
@@ -149,11 +141,11 @@ interface IPacket
 {{
     {2}
 
-    public void Read(ReadOnlySpan<byte> span, ref ushort count)
+    public void Read(ArraySegment<byte> segment, ref ushort count)
     {{
         {3}
     }}
-    public bool Write(Span<byte> span, ref ushort count)
+    public bool Write(ArraySegment<byte> segment, ref ushort count)
     {{
         bool success = true;
         {4}
@@ -170,7 +162,7 @@ public List<{0}> {1}s = new List<{0}>();
         // {1} To~ 변수형식.
         // {2} 변수 형식
         public static string readFormat =
-@"this.{0} = BitConverter.{1}(span.Slice(count, span.Length - count));
+@"this.{0} = BitConverter.{1}(segment.Array, segment.Offset + count);
 count += sizeof({2});
 ";
         // {0} 변수 이름.
@@ -181,9 +173,9 @@ count += sizeof({1});";
 
         // {0} 변수 이름.
         public static string readStringFormat =
-@"ushort {0}Length = BitConverter.ToUInt16(span.Slice(count, span.Length - count));
+@"ushort {0}Length = BitConverter.ToUInt16(segment.Array, segment.Offset + count);
 count += sizeof(ushort);
-this.{0} = Encoding.Unicode.GetString(span.Slice(count, {0}Length));
+this.{0} = Encoding.Unicode.GetString(segment.Array, segment.Offset + count, {0}Length);
 count += {0}Length;
 ";
 
@@ -191,7 +183,7 @@ count += {0}Length;
         // {1} 리스트 이름 [소문자 시작]
         public static string readListFormat =
 @"this.{1}s.Clear();
-ushort {1}Length = BitConverter.ToUInt16(span.Slice(count, span.Length - count));
+ushort {1}Length = BitConverter.ToUInt16(segment.Array, segment.Offset + count);
 count += sizeof(ushort);
 for (int i = 0; i < {1}Length; i++)
 {{
@@ -204,7 +196,7 @@ for (int i = 0; i < {1}Length; i++)
         // {0} 변수 이름.
         // {1} 변수 형식.
         public static string writeFormat =
-@"success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), this.{0});
+@"Array.Copy(BitConverter.GetBytes(this.{0}), 0, segment.Array, segment.Offset + count, sizeof({1}));
 count += sizeof({1});
 ";
         // {0} 변수 이름.
@@ -216,17 +208,17 @@ count += sizeof({1});";
         // {0} 변수 이름.
         public static string writeStringFormat =
 @"ushort {0}Length = (ushort)Encoding.Unicode.GetBytes(this.{0}, 0, this.{0}.Length, segment.Array, segment.Offset + count + sizeof(ushort)); // nameLength가 들어갈 공간만큼 뒤로 밀어준다.
-success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), {0}Length);
+Array.Copy(BitConverter.GetBytes({0}Length), 0, segment.Array, segment.Offset + count, sizeof(ushort));
 count += sizeof(ushort);
 count += {0}Length;
 ";
         // {0} 리스트 이름 [대문자 시작]
         // {1} 리스트 이름 [소문자 시작]
         public static string writeListFormat =
-@"success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), (ushort)this.{1}s.Count);
+@"Array.Copy(BitConverter.GetBytes((ushort)this.{1}s.Count), 0, segment.Array, segment.Offset + count, sizeof(ushort));
 count += sizeof(ushort);
 foreach ({0} {1} in this.{1}s)
-    success &= {1}.Write(span, ref count);
+    {1}.Write(segment, ref count);
 ";
     }
 }

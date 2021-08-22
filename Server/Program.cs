@@ -28,7 +28,9 @@ namespace Server
             string host = Dns.GetHostName();
             Console.WriteLine($"host:{host}");
             IPHostEntry ipHost = Dns.GetHostEntry(host); //네트워크 망 안의 dns서버가 알려줌?
-            IPAddress address = ipHost.AddressList[0]; //식당 주소.
+            // IPAddress address = ipHost.AddressList[0]; //식당 주소.
+            // Console.WriteLine(IPAddress.Loopback);
+            IPAddress address = IPAddress.Loopback;
             IPEndPoint endPoint = new IPEndPoint(address, 7777); //식당 정문? 문의 번호. 문지기 번호.
 
             listener.Init(endPoint, () => { return SessionManager.Instance.Generate(); });

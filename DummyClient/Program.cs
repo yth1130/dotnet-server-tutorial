@@ -14,12 +14,21 @@ namespace DummyClient
             string host = Dns.GetHostName();
             Console.WriteLine($"host:{host}");
             IPHostEntry ipHost = Dns.GetHostEntry(host); //네트워크 망 안의 dns서버가 알려줌?
-            IPAddress address = ipHost.AddressList[0]; //식당 주소.
+            // System.Console.WriteLine("--------------");
+            // foreach (var ad in ipHost.AddressList)
+            // {
+            //     System.Console.WriteLine(ad.ToString());
+            // }
+            // System.Console.WriteLine("--------------");
+            // IPAddress address = ipHost.AddressList[0]; //식당 주소.
+            IPAddress address = IPAddress.Loopback;
+            Console.WriteLine(address.ToString());
             IPEndPoint endPoint = new IPEndPoint(address, 7777); //식당 정문? 문의 번호. 문지기 번호.
+            Console.WriteLine(endPoint.ToString());
 
             Connector connector = new Connector();
 
-            connector.Connect(endPoint, () => SessionManager.Instance.Generate(), count: 500);
+            connector.Connect(endPoint, () => SessionManager.Instance.Generate(), count: 10);
 
             while(true)
             {

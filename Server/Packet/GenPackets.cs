@@ -26,15 +26,13 @@ class C_Chat : IPacket
 
     public void Read(ArraySegment<byte> segment)
     {
-        ReadOnlySpan<byte> span = new ReadOnlySpan<byte>(segment.Array, segment.Offset, segment.Count);
-
         ushort count = 0;
         count += sizeof(ushort);
         count += sizeof(ushort);
         
-        ushort chatLength = BitConverter.ToUInt16(span.Slice(count, span.Length - count));
+        ushort chatLength = BitConverter.ToUInt16(segment.Array, segment.Offset + count);
 		count += sizeof(ushort);
-		this.chat = Encoding.Unicode.GetString(span.Slice(count, chatLength));
+		this.chat = Encoding.Unicode.GetString(segment.Array, segment.Offset + count, chatLength);
 		count += chatLength;
 		
     }
@@ -43,22 +41,16 @@ class C_Chat : IPacket
     {
         ArraySegment<byte> segment = SendBufferHelper.Open(4096);
         ushort count = 0;
-        bool success = true;
-
-        Span<byte> span = new Span<byte>(segment.Array, segment.Offset, segment.Count);
 
         count += sizeof(ushort);
-        success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), (ushort)PacketID.C_Chat);
+        Array.Copy(BitConverter.GetBytes((ushort)PacketID.C_Chat), 0, segment.Array, segment.Offset + count, sizeof(ushort));
         count += sizeof(ushort);
         ushort chatLength = (ushort)Encoding.Unicode.GetBytes(this.chat, 0, this.chat.Length, segment.Array, segment.Offset + count + sizeof(ushort)); // nameLength가 들어갈 공간만큼 뒤로 밀어준다.
-		success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), chatLength);
+		Array.Copy(BitConverter.GetBytes(chatLength), 0, segment.Array, segment.Offset + count, sizeof(ushort));
 		count += sizeof(ushort);
 		count += chatLength;
 		
-        success &= BitConverter.TryWriteBytes(segment, count);
-
-        if (success == false)
-            return null;
+        Array.Copy(BitConverter.GetBytes(count), 0, segment.Array, segment.Offset, sizeof(ushort));
         
         return SendBufferHelper.Close(count);
     }
@@ -74,17 +66,15 @@ class S_Chat : IPacket
 
     public void Read(ArraySegment<byte> segment)
     {
-        ReadOnlySpan<byte> span = new ReadOnlySpan<byte>(segment.Array, segment.Offset, segment.Count);
-
         ushort count = 0;
         count += sizeof(ushort);
         count += sizeof(ushort);
         
-        this.playerId = BitConverter.ToInt32(span.Slice(count, span.Length - count));
+        this.playerId = BitConverter.ToInt32(segment.Array, segment.Offset + count);
 		count += sizeof(int);
-		ushort chatLength = BitConverter.ToUInt16(span.Slice(count, span.Length - count));
+		ushort chatLength = BitConverter.ToUInt16(segment.Array, segment.Offset + count);
 		count += sizeof(ushort);
-		this.chat = Encoding.Unicode.GetString(span.Slice(count, chatLength));
+		this.chat = Encoding.Unicode.GetString(segment.Array, segment.Offset + count, chatLength);
 		count += chatLength;
 		
     }
@@ -93,24 +83,18 @@ class S_Chat : IPacket
     {
         ArraySegment<byte> segment = SendBufferHelper.Open(4096);
         ushort count = 0;
-        bool success = true;
-
-        Span<byte> span = new Span<byte>(segment.Array, segment.Offset, segment.Count);
 
         count += sizeof(ushort);
-        success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), (ushort)PacketID.S_Chat);
+        Array.Copy(BitConverter.GetBytes((ushort)PacketID.S_Chat), 0, segment.Array, segment.Offset + count, sizeof(ushort));
         count += sizeof(ushort);
-        success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), this.playerId);
+        Array.Copy(BitConverter.GetBytes(this.playerId), 0, segment.Array, segment.Offset + count, sizeof(int));
 		count += sizeof(int);
 		ushort chatLength = (ushort)Encoding.Unicode.GetBytes(this.chat, 0, this.chat.Length, segment.Array, segment.Offset + count + sizeof(ushort)); // nameLength가 들어갈 공간만큼 뒤로 밀어준다.
-		success &= BitConverter.TryWriteBytes(span.Slice(count, span.Length - count), chatLength);
+		Array.Copy(BitConverter.GetBytes(chatLength), 0, segment.Array, segment.Offset + count, sizeof(ushort));
 		count += sizeof(ushort);
 		count += chatLength;
 		
-        success &= BitConverter.TryWriteBytes(segment, count);
-
-        if (success == false)
-            return null;
+        Array.Copy(BitConverter.GetBytes(count), 0, segment.Array, segment.Offset, sizeof(ushort));
         
         return SendBufferHelper.Close(count);
     }
